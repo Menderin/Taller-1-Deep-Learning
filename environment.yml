@@ -1,0 +1,12 @@
+name: taller_1_dl
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy>=1.26,<3.0
+  - pandas>=2.1,<3.0
+  - scikit-learn>=1.4,<2.0
+  - matplotlib>=3.8,<4.0
+  - pyreadstat>=1.2,<2.0

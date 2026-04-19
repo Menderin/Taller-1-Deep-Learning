@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+.venv/
+.env
+
+# Local workspace and temporary helpers
+.vscode/
+.tmp*
+analyze_pdfs.py
+extract_pdf_content.py
+search_pdfs.py
+
+# Local datasets (not versioned)
+data/raw/*.sav
+!data/raw/.gitkeep
+
+# Generated artifacts
+data/processed/*
+!data/processed/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+reports/figuras/*
+!reports/figuras/.gitkeep
+reports/tablas/*
+!reports/tablas/.gitkeep
