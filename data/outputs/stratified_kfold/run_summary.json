@@ -1,0 +1,71 @@
+{
+  "created_at_utc": "2026-04-20T08:41:56.333693+00:00",
+  "strategy": "stratified_kfold",
+  "strategy_label": "Stratified CV (up to 5 folds)",
+  "estimated_runtime": "~1-3 minutes",
+  "elapsed_seconds": 3.84,
+  "dataset": "15 atributos R0-R5.sav",
+  "target": "GDS",
+  "rows": 1119,
+  "feature_columns": 15,
+  "codifications": [
+    "GDS",
+    "GDS_R1",
+    "GDS_R2",
+    "GDS_R3",
+    "GDS_R4",
+    "GDS_R5"
+  ],
+  "validation": {
+    "codification_model": "NaiveBayes manual",
+    "ensemble_models": [
+      "boosting",
+      "stacking",
+      "bagging"
+    ]
+  },
+  "chi2_k_best": 10,
+  "pca_components_95": 11,
+  "ensemble_cv_splits": 2,
+  "cv_splits_by_codification": {
+    "GDS": 2,
+    "GDS_R1": 5,
+    "GDS_R2": 5,
+    "GDS_R3": 5,
+    "GDS_R4": 5,
+    "GDS_R5": 5
+  },
+  "outputs": {
+    "distribution_summary": "reports/tablas/stratified_kfold/class_distribution_all_codifications.csv",
+    "distribution_plot": "reports/figuras/stratified_kfold/class_distribution_all_codifications.png",
+    "feature_selection": {
+      "variance": "reports/tablas/stratified_kfold/features_variance_selected.csv",
+      "chi2_top15": "reports/tablas/stratified_kfold/features_chi2_top15_gds.csv",
+      "chi2_all": "reports/tablas/stratified_kfold/features_chi2_all_gds.csv",
+      "rfe_logistic": "reports/tablas/stratified_kfold/features_rfe_logistic.csv",
+      "rfe_tree": "reports/tablas/stratified_kfold/features_rfe_tree.csv",
+      "forward_knn": "reports/tablas/stratified_kfold/features_forward_knn.csv",
+      "metadata": "data/outputs/stratified_kfold/feature_selection_metadata.json"
+    },
+    "pca": {
+      "explained_variance": "reports/tablas/stratified_kfold/pca_explained_variance.csv",
+      "components_95": "reports/tablas/stratified_kfold/pca_components_95.csv",
+      "plot": "reports/figuras/stratified_kfold/pca_cumulative_variance.png"
+    },
+    "codification_metrics_table": "reports/tablas/stratified_kfold/naive_bayes_metrics_by_codification.csv",
+    "codification_metrics_figure": "reports/figuras/stratified_kfold/naive_bayes_metrics_by_codification.png",
+    "selected_features": "reports/tablas/stratified_kfold/naive_bayes_selected_features_by_codification.csv",
+    "ensemble_metrics_table": "reports/tablas/stratified_kfold/model_metrics.csv",
+    "ensemble_metrics_figure": "reports/figuras/stratified_kfold/model_metrics.png",
+    "confusion_tables": {
+      "bagging": "reports/tablas/stratified_kfold/confusion_matrix_bagging.csv",
+      "boosting": "reports/tablas/stratified_kfold/confusion_matrix_boosting.csv",
+      "stacking": "reports/tablas/stratified_kfold/confusion_matrix_stacking.csv"
+    },
+    "confusion_figures": {
+      "bagging": "reports/figuras/stratified_kfold/confusion_matrix_bagging.png",
+      "boosting": "reports/figuras/stratified_kfold/confusion_matrix_boosting.png",
+      "stacking": "reports/figuras/stratified_kfold/confusion_matrix_stacking.png"
+    }
+  }
+}

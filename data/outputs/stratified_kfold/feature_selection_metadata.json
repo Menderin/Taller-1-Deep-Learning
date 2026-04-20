@@ -1,0 +1,6 @@
+{
+  "top_k": 15,
+  "rfe_features": 10,
+  "forward_features": 5,
+  "forward_cv": 2
+}
