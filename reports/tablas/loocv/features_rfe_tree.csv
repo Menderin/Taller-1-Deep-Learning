@@ -1,0 +1,16 @@
+feature,ranking,selected
+A682,1,True
+Avenida2,1,True
+Año,1,True
+Caldera2,1,True
+Copiapo2,1,True
+Día,1,True
+Estación,1,True
+Imperial2,1,True
+Mes,1,True
+Miguel2,1,True
+González2,2,False
+NumeroPiso,3,False
+Ciudad,4,False
+CalleLugar,5,False
+País,6,False

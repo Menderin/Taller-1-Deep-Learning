@@ -1,0 +1,71 @@
+{
+  "created_at_utc": "2026-04-20T08:35:50.868756+00:00",
+  "strategy": "loocv",
+  "strategy_label": "LOOCV (Leave-One-Out)",
+  "estimated_runtime": "~45-180 minutes",
+  "elapsed_seconds": 2423.39,
+  "dataset": "15 atributos R0-R5.sav",
+  "target": "GDS",
+  "rows": 1119,
+  "feature_columns": 15,
+  "codifications": [
+    "GDS",
+    "GDS_R1",
+    "GDS_R2",
+    "GDS_R3",
+    "GDS_R4",
+    "GDS_R5"
+  ],
+  "validation": {
+    "codification_model": "NaiveBayes manual",
+    "ensemble_models": [
+      "stacking",
+      "boosting",
+      "bagging"
+    ]
+  },
+  "chi2_k_best": 10,
+  "pca_components_95": 11,
+  "ensemble_cv_splits": 1119,
+  "cv_splits_by_codification": {
+    "GDS": 1119,
+    "GDS_R1": 1119,
+    "GDS_R2": 1119,
+    "GDS_R3": 1119,
+    "GDS_R4": 1119,
+    "GDS_R5": 1119
+  },
+  "outputs": {
+    "distribution_summary": "reports/tablas/loocv/class_distribution_all_codifications.csv",
+    "distribution_plot": "reports/figuras/loocv/class_distribution_all_codifications.png",
+    "feature_selection": {
+      "variance": "reports/tablas/loocv/features_variance_selected.csv",
+      "chi2_top15": "reports/tablas/loocv/features_chi2_top15_gds.csv",
+      "chi2_all": "reports/tablas/loocv/features_chi2_all_gds.csv",
+      "rfe_logistic": "reports/tablas/loocv/features_rfe_logistic.csv",
+      "rfe_tree": "reports/tablas/loocv/features_rfe_tree.csv",
+      "forward_knn": "reports/tablas/loocv/features_forward_knn.csv",
+      "metadata": "data/outputs/loocv/feature_selection_metadata.json"
+    },
+    "pca": {
+      "explained_variance": "reports/tablas/loocv/pca_explained_variance.csv",
+      "components_95": "reports/tablas/loocv/pca_components_95.csv",
+      "plot": "reports/figuras/loocv/pca_cumulative_variance.png"
+    },
+    "codification_metrics_table": "reports/tablas/loocv/naive_bayes_metrics_by_codification.csv",
+    "codification_metrics_figure": "reports/figuras/loocv/naive_bayes_metrics_by_codification.png",
+    "selected_features": "reports/tablas/loocv/naive_bayes_selected_features_by_codification.csv",
+    "ensemble_metrics_table": "reports/tablas/loocv/model_metrics.csv",
+    "ensemble_metrics_figure": "reports/figuras/loocv/model_metrics.png",
+    "confusion_tables": {
+      "bagging": "reports/tablas/loocv/confusion_matrix_bagging.csv",
+      "boosting": "reports/tablas/loocv/confusion_matrix_boosting.csv",
+      "stacking": "reports/tablas/loocv/confusion_matrix_stacking.csv"
+    },
+    "confusion_figures": {
+      "bagging": "reports/figuras/loocv/confusion_matrix_bagging.png",
+      "boosting": "reports/figuras/loocv/confusion_matrix_boosting.png",
+      "stacking": "reports/figuras/loocv/confusion_matrix_stacking.png"
+    }
+  }
+}
