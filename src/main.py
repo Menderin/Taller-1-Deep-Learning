@@ -15,7 +15,14 @@ if __package__ is None or __package__ == "":
 
 from src.bagging_model import build_bagging_model
 from src.boosting_model import build_boosting_model
-from src.config import DEFAULT_DATASET_FILENAME, FIGURES_DIR, OUTPUTS_DIR, PROJECT_ROOT, TABLES_DIR, ensure_project_dirs
+from src.config import (
+    DEFAULT_DATASET_FILENAME,
+    FIGURES_DIR,
+    OUTPUTS_DIR,
+    PROJECT_ROOT,
+    TABLES_DIR,
+    ensure_project_dirs,
+)
 from src.data_loader import load_spss_dataframe
 from src.evaluation import run_model_suite
 from src.notebook_workflow import (
@@ -25,7 +32,11 @@ from src.notebook_workflow import (
     run_feature_selection_study,
     run_pca_study,
 )
-from src.preprocessing import feature_frame, split_features_target, validate_binary_features
+from src.preprocessing import (
+    feature_frame,
+    split_features_target,
+    validate_binary_features,
+)
 from src.stacking_model import build_stacking_model
 from src.visualization import (
     plot_confusion_matrix,
@@ -43,12 +54,12 @@ APPLY_OVERSAMPLING = True
 
 STRATEGY_DEFINITIONS: dict[str, dict[str, str]] = {
     "stratified_kfold": {
-        "label": "Stratified CV (up to 5 folds)",
-        "estimate": "~1-3 minutes",
+        "label": "CV Estratificado (hasta 5 folds)",
+        "estimate": "~1-3 minutos",
     },
     "loocv": {
         "label": "LOOCV (Leave-One-Out)",
-        "estimate": "~45-180 minutes",
+        "estimate": "~45-180 minutos",
     },
 }
 
@@ -60,6 +71,7 @@ MENU_OPTIONS: dict[str, list[str]] = {
 
 
 def model_builders():
+    """Devuelve un diccionario con los constructores de modelos de ensemble disponibles."""
     return {
         "bagging": build_bagging_model,
         "boosting": build_boosting_model,
@@ -68,6 +80,8 @@ def model_builders():
 
 
 def relative_path(path: Path) -> str:
+    """Convierte una ruta absoluta a una ruta relativa respecto al directorio raíz del proyecto.
+    Si la ruta no está dentro del proyecto, devuelve la ruta original como cadena."""
     try:
         return path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
     except ValueError:
@@ -75,33 +89,42 @@ def relative_path(path: Path) -> str:
 
 
 def choose_execution_strategies() -> list[str]:
+    """Permite al usuario seleccionar las estrategias de validación a ejecutar.
+    Si la ejecución no es interactiva, se selecciona la opción 1 (CV Estratificado) por defecto.
+    """
     if not sys.stdin.isatty():
-        print("Non-interactive execution detected. Defaulting to option 1 (Stratified CV).")
+        print(
+            "Ejecución no interactiva detectada. Seleccionando opción 1 (CV Estratificado)."
+        )
         return MENU_OPTIONS["1"]
 
-    print("Select experiment strategy:")
-    print(f"1) Stratified CV (up to 5 folds) [{STRATEGY_DEFINITIONS['stratified_kfold']['estimate']}]")
+    print("Seleccione la estrategia de validación a ejecutar:")
+    print(
+        f"1) CV Estratificado (hasta 5 folds) [{STRATEGY_DEFINITIONS['stratified_kfold']['estimate']}]"
+    )
     print(f"2) LOOCV [{STRATEGY_DEFINITIONS['loocv']['estimate']}]")
-    print("3) Both strategies [~45-180 minutes +]")
+    print("3) Ambas estrategias")
 
     default_option = "1"
     try:
-        choice = input(f"Choose an option [{default_option}]: ").strip()
+        choice = input(f"Elige una opción [{default_option}]: ").strip()
     except (EOFError, KeyboardInterrupt):
-        print("No option provided. Using default option 1.")
+        print("Ninguna opción proporcionada. Usando la opción por defecto 1.")
         return MENU_OPTIONS[default_option]
 
     if choice == "":
         choice = default_option
 
     if choice not in MENU_OPTIONS:
-        print("Invalid option. Using default option 1.")
+        print("Opción inválida. Usando la opción por defecto 1.")
         return MENU_OPTIONS[default_option]
 
     return MENU_OPTIONS[choice]
 
 
 def get_strategy_dirs(strategy_key: str) -> tuple[Path, Path, Path]:
+    """Devuelve las rutas de las carpetas para tablas, figuras y outputs específicas de la
+    estrategia dada."""
     tables_dir = TABLES_DIR / strategy_key
     figures_dir = FIGURES_DIR / strategy_key
     outputs_dir = OUTPUTS_DIR / strategy_key
@@ -113,6 +136,8 @@ def get_strategy_dirs(strategy_key: str) -> tuple[Path, Path, Path]:
 
 
 def _build_distribution_summary(distributions: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Construye un DataFrame resumen que consolida las distribuciones de clases por codificación
+    en un formato tabular más amigable para su análisis y visualización."""
     rows: list[dict[str, float | int | str]] = []
     for codification, distribution in distributions.items():
         for class_label, payload in distribution.iterrows():
@@ -146,6 +171,10 @@ def save_outputs(
     feature_columns: int,
     elapsed_seconds: float,
 ) -> dict[str, Path]:
+    """Guarda todos los outputs generados durante la ejecución de una estrategia específica en las
+    carpetas correspondientes, y devuelve un diccionario con las rutas de los archivos guardados.
+    También se encarga de limpiar cualquier artefacto de ejecuciones anteriores que pueda causar
+    confusión antes de guardar los nuevos outputs."""
     tables_dir, figures_dir, outputs_dir = get_strategy_dirs(strategy_key)
 
     legacy_table_files = [
@@ -172,9 +201,15 @@ def save_outputs(
     distribution_summary_path = tables_dir / "class_distribution_all_codifications.csv"
     distribution_plot_path = figures_dir / "class_distribution_all_codifications.png"
 
-    codification_metrics_table_path = tables_dir / "naive_bayes_metrics_by_codification.csv"
-    codification_metrics_figure_path = figures_dir / "naive_bayes_metrics_by_codification.png"
-    selected_features_path = tables_dir / "naive_bayes_selected_features_by_codification.csv"
+    codification_metrics_table_path = (
+        tables_dir / "naive_bayes_metrics_by_codification.csv"
+    )
+    codification_metrics_figure_path = (
+        figures_dir / "naive_bayes_metrics_by_codification.png"
+    )
+    selected_features_path = (
+        tables_dir / "naive_bayes_selected_features_by_codification.csv"
+    )
 
     ensemble_metrics_table_path = tables_dir / "model_metrics.csv"
     ensemble_metrics_figure_path = figures_dir / "model_metrics.png"
@@ -194,17 +229,23 @@ def save_outputs(
     summary_path = outputs_dir / "run_summary.json"
 
     for codification, distribution in distributions.items():
-        per_codification_path = tables_dir / f"class_distribution_{codification.lower()}.csv"
+        per_codification_path = (
+            tables_dir / f"class_distribution_{codification.lower()}.csv"
+        )
         distribution.to_csv(per_codification_path)
 
     distribution_summary = _build_distribution_summary(distributions)
     distribution_summary.to_csv(distribution_summary_path, index=False)
     plot_grouped_class_distributions(distributions, output_path=distribution_plot_path)
 
-    feature_selection_outputs["variance_selected"].to_csv(feature_variance_path, index=False)
+    feature_selection_outputs["variance_selected"].to_csv(
+        feature_variance_path, index=False
+    )
     feature_selection_outputs["chi2_top15"].to_csv(feature_chi2_top15_path, index=False)
     feature_selection_outputs["chi2_all"].to_csv(feature_chi2_all_path, index=False)
-    feature_selection_outputs["rfe_logistic"].to_csv(feature_rfe_logistic_path, index=False)
+    feature_selection_outputs["rfe_logistic"].to_csv(
+        feature_rfe_logistic_path, index=False
+    )
     feature_selection_outputs["rfe_tree"].to_csv(feature_rfe_tree_path, index=False)
     feature_selection_outputs["forward_knn"].to_csv(feature_forward_path, index=False)
 
@@ -219,10 +260,12 @@ def save_outputs(
 
     codification_metrics_df.to_csv(codification_metrics_table_path)
     plot_metrics(
-        codification_metrics_df[["accuracy", "precision_macro", "recall_macro", "f1_macro"]],
+        codification_metrics_df[
+            ["accuracy", "precision_macro", "recall_macro", "f1_macro"]
+        ],
         output_path=codification_metrics_figure_path,
-        title="Naive Bayes metrics by GDS codification",
-        xlabel="Codification",
+        title="Métricas de Naive Bayes por codificación GDS",
+        xlabel="Codificación",
     )
     selected_features_df.to_csv(selected_features_path, index=False)
 
@@ -230,8 +273,8 @@ def save_outputs(
     plot_metrics(
         ensemble_metrics_df,
         output_path=ensemble_metrics_figure_path,
-        title="Ensemble metrics by model",
-        xlabel="Model",
+        title="Métricas de Ensemble por modelo",
+        xlabel="Modelo",
     )
 
     confusion_table_paths: dict[str, str] = {}
@@ -248,7 +291,7 @@ def save_outputs(
         plot_confusion_matrix(
             conf_matrix_values=matrix,
             labels=labels,
-            title=f"Confusion Matrix - {model_name.capitalize()}",
+            title=f"Matriz de Confusión - {model_name.capitalize()}",
             output_path=matrix_figure_path,
         )
 
@@ -274,7 +317,8 @@ def save_outputs(
         "pca_components_95": pca_95_components,
         "ensemble_cv_splits": int(ensemble_cv_splits),
         "cv_splits_by_codification": {
-            cod: int(splits) for cod, splits in codification_metrics_df["cv_splits"].to_dict().items()
+            cod: int(splits)
+            for cod, splits in codification_metrics_df["cv_splits"].to_dict().items()
         },
         "outputs": {
             "distribution_summary": relative_path(distribution_summary_path),
@@ -293,8 +337,12 @@ def save_outputs(
                 "components_95": relative_path(pca_95_path),
                 "plot": relative_path(pca_plot_path),
             },
-            "codification_metrics_table": relative_path(codification_metrics_table_path),
-            "codification_metrics_figure": relative_path(codification_metrics_figure_path),
+            "codification_metrics_table": relative_path(
+                codification_metrics_table_path
+            ),
+            "codification_metrics_figure": relative_path(
+                codification_metrics_figure_path
+            ),
             "selected_features": relative_path(selected_features_path),
             "ensemble_metrics_table": relative_path(ensemble_metrics_table_path),
             "ensemble_metrics_figure": relative_path(ensemble_metrics_figure_path),
@@ -316,8 +364,11 @@ def save_outputs(
 
 
 def main() -> None:
+    # Asegurar que las carpetas necesarias existen antes de cualquier operación de
+    # lectura/escritura
     ensure_project_dirs()
 
+    # Limpiar artefactos de ejecuciones anteriores que podrían causar confusión
     legacy_root_artifacts = [
         TABLES_DIR / "class_distribution_gds.csv",
         TABLES_DIR / "model_metrics.csv",
@@ -352,30 +403,38 @@ def main() -> None:
     codification_comparison_rows: list[dict[str, float | str | int]] = []
     model_comparison_rows: list[dict[str, float | str | int]] = []
 
-    print(f"Rows: {len(df)}")
-    print(f"Feature columns: {x_frame.shape[1]}")
-    print(f"Base target: {TARGET_COLUMN}")
-    print(f"Codifications: {', '.join([cod for cod in CODIFICATION_COLUMNS if cod in df.columns])}")
-    print("Feature selection methods: variance, chi2, RFE (logistic/tree), forward selection")
-    print("Feature extraction method: PCA")
-    print(f"Validation model: Naive Bayes manual (chi2 top-{CHI2_K_BEST} per codification)")
-    print("Mandatory ensemble suite: Bagging, Boosting, Stacking")
+    print(f"Filas: {len(df)}")
+    print(f"Columnas de características: {x_frame.shape[1]}")
+    print(f"Objetivo base: {TARGET_COLUMN}")
+    print(
+        f"Codificaciones: {', '.join([cod for cod in CODIFICATION_COLUMNS if cod in df.columns])}"
+    )
+    print(
+        "Métodos de selección de características: varianza, chi2, RFE (logística/arbol), selección forward"
+    )
+    print("Método de extracción de características: PCA")
+    print(
+        f"Modelo de validación: Naive Bayes manual (chi2 top-{CHI2_K_BEST} por codificación)"
+    )
+    print("Conjunto de modelos obligatorio: Bagging, Boosting, Stacking")
 
     for strategy_key in selected_strategies:
         strategy_label = STRATEGY_DEFINITIONS[strategy_key]["label"]
         strategy_estimate = STRATEGY_DEFINITIONS[strategy_key]["estimate"]
 
         print("\n" + "=" * 80)
-        print(f"Running strategy: {strategy_label}")
-        print(f"Estimated runtime: {strategy_estimate}")
+        print(f" Estrategia: {strategy_label}")
+        print(f" Tiempo estimado de ejecución: {strategy_estimate}")
 
         started_at = perf_counter()
-        codification_metrics_df, selected_features_df = evaluate_naive_bayes_codifications(
-            df=df,
-            strategy=strategy_key,
-            requested_splits=DESIRED_CV_SPLITS,
-            random_state=RANDOM_STATE,
-            k_best=CHI2_K_BEST,
+        codification_metrics_df, selected_features_df = (
+            evaluate_naive_bayes_codifications(
+                df=df,
+                strategy=strategy_key,
+                requested_splits=DESIRED_CV_SPLITS,
+                random_state=RANDOM_STATE,
+                k_best=CHI2_K_BEST,
+            )
         )
 
         ensemble_metrics_df, confusion_by_model, ensemble_cv_splits = run_model_suite(
@@ -444,20 +503,25 @@ def main() -> None:
                 "elapsed_seconds": round(elapsed_seconds, 2),
                 "ensemble_cv_splits": int(ensemble_cv_splits),
                 "cv_splits_by_codification": {
-                    cod: int(splits) for cod, splits in codification_metrics_df["cv_splits"].to_dict().items()
+                    cod: int(splits)
+                    for cod, splits in codification_metrics_df["cv_splits"]
+                    .to_dict()
+                    .items()
                 },
-                "outputs": {name: relative_path(path) for name, path in output_paths.items()},
+                "outputs": {
+                    name: relative_path(path) for name, path in output_paths.items()
+                },
             }
         )
 
-        print(f"Completed in {elapsed_seconds:.2f} seconds")
-        print(f"Codifications evaluated: {', '.join(codification_metrics_df.index)}")
-        print("Codification metrics (macro-based):")
+        print(f"Completado en {elapsed_seconds:.2f} segundos")
+        print(f"Codificaciones evaluadas: {', '.join(codification_metrics_df.index)}")
+        print("Métricas de codificación (basadas en macro):")
         print(codification_metrics_df.round(4))
-        print("Ensemble metrics (macro-based):")
+        print("Métricas del conjunto (basadas en macro):")
         print(ensemble_metrics_df.round(4))
-        print(f"Ensemble CV splits used: {ensemble_cv_splits}")
-        print("Saved outputs:")
+        print(f"Divisiones de validación del conjunto: {ensemble_cv_splits}")
+        print("Outputs guardados:")
         for key, path in output_paths.items():
             print(f"- {key}: {relative_path(path)}")
 
@@ -478,18 +542,24 @@ def main() -> None:
         "feature_columns": x_frame.shape[1],
         "codifications": [cod for cod in CODIFICATION_COLUMNS if cod in df.columns],
         "selected_strategies": selected_strategies,
-        "strategy_codification_comparison_table": relative_path(codification_comparison_path),
+        "strategy_codification_comparison_table": relative_path(
+            codification_comparison_path
+        ),
         "strategy_model_comparison_table": relative_path(model_comparison_path),
         "runs": run_records,
     }
-    global_summary_path.write_text(json.dumps(global_summary, indent=2), encoding="utf-8")
+    global_summary_path.write_text(
+        json.dumps(global_summary, indent=2), encoding="utf-8"
+    )
 
     print("\n" + "=" * 80)
-    print("Notebook + ensemble pipeline completed")
-    print("Saved aggregate outputs:")
-    print(f"- strategy codification comparison table: {relative_path(codification_comparison_path)}")
-    print(f"- strategy model comparison table: {relative_path(model_comparison_path)}")
-    print(f"- global summary: {relative_path(global_summary_path)}")
+    print("Pipeline completado")
+    print("Outputs guardados:")
+    print(
+        f"- tabla de comparación de codificaciones: {relative_path(codification_comparison_path)}"
+    )
+    print(f"- tabla de comparación de modelos: {relative_path(model_comparison_path)}")
+    print(f"- resumen global: {relative_path(global_summary_path)}")
 
 
 if __name__ == "__main__":

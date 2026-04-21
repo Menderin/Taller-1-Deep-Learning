@@ -14,6 +14,7 @@ DEFAULT_DATASET_FILENAME = "15 atributos R0-R5.sav"
 
 
 def dataset_path(filename: str = DEFAULT_DATASET_FILENAME) -> Path:
+    """Devuelve la ruta al dataset, buscando primero en RAW_DATA_DIR y luego en DATA_DIR."""
     candidate_in_raw = RAW_DATA_DIR / filename
     if candidate_in_raw.exists():
         return candidate_in_raw
@@ -21,6 +22,7 @@ def dataset_path(filename: str = DEFAULT_DATASET_FILENAME) -> Path:
 
 
 def ensure_project_dirs() -> None:
+    """Crea las carpetas necesarias para el proyecto si no existen."""
     for folder in (
         RAW_DATA_DIR,
         PROCESSED_DATA_DIR,

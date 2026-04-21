@@ -5,6 +5,9 @@ from sklearn.tree import DecisionTreeClassifier
 
 
 def build_stacking_model(random_state: int = 42) -> StackingClassifier:
+    """Construye un modelo de Stacking utilizando Naive Bayes, Árbol de Decisión
+    y Random Forest como estimadores base, y Regresión Logística como estimador final.
+    """
     estimators = [
         ("naive_bayes", BernoulliNB()),
         ("tree", DecisionTreeClassifier(random_state=random_state)),
