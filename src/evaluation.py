@@ -6,7 +6,13 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 from sklearn.base import ClassifierMixin
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import LeaveOneOut, StratifiedKFold
 
 from .balancing import oversample_minority_classes
@@ -16,11 +22,13 @@ SplitStrategy = Literal["stratified_kfold", "loocv"]
 
 
 def choose_n_splits(y_series: pd.Series, requested_splits: int = 5) -> int:
+    """Determina el número efectivo de splits para validación cruzada, asegurando
+    que cada clase tenga al menos 2 muestras en cada fold."""
     min_class_count = int(y_series.value_counts().min())
     if min_class_count < 2:
         raise ValueError(
-            "Cross-validation requires at least 2 samples in every class. "
-            f"Minimum class count found: {min_class_count}."
+            "Cross-validation requiere al menos 2 muestras por clase."
+            f"Cantidad de muestras en la clase minoritaria: {min_class_count}."
         )
     return min(requested_splits, min_class_count)
 
@@ -34,18 +42,23 @@ def cross_validated_predictions(
     random_state: int = 42,
     apply_oversampling: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, int]:
+    """Realiza validación cruzada utilizando la estrategia especificada, aplicando oversampling
+    a los datos de entrenamiento en cada fold si apply_oversampling es True. Devuelve los arrays
+    de etiquetas verdaderas, predichas y el número efectivo de splits utilizados."""
     x_values = x_frame.to_numpy()
     y_values = y_series.to_numpy()
 
     if strategy == "stratified_kfold":
         effective_splits = choose_n_splits(y_series, requested_splits=requested_splits)
-        splitter = StratifiedKFold(n_splits=effective_splits, shuffle=True, random_state=random_state)
+        splitter = StratifiedKFold(
+            n_splits=effective_splits, shuffle=True, random_state=random_state
+        )
         split_iterator = splitter.split(x_values, y_values)
     elif strategy == "loocv":
         effective_splits = len(y_values)
         split_iterator = LeaveOneOut().split(x_values, y_values)
     else:
-        raise ValueError(f"Unknown split strategy: {strategy}")
+        raise ValueError(f"Estrategia de división desconocida: {strategy}")
 
     predictions = np.empty(len(y_values), dtype=object)
     filled_mask = np.zeros(len(y_values), dtype=bool)
@@ -69,7 +82,9 @@ def cross_validated_predictions(
         filled_mask[test_idx] = True
 
     if not bool(filled_mask.all()):
-        raise RuntimeError("Cross-validation did not produce predictions for all samples.")
+        raise RuntimeError(
+            "Cross-validation no completada correctamente: no se llenaron todas las predicciones."
+        )
 
     y_pred = np.asarray(predictions)
     if y_values.dtype != object:
@@ -78,11 +93,18 @@ def cross_validated_predictions(
     return y_values, y_pred, effective_splits
 
 
-def metrics_from_predictions(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
+def metrics_from_predictions(
+    y_true: np.ndarray, y_pred: np.ndarray
+) -> dict[str, float]:
+    """Calcula métricas de evaluación a partir de las etiquetas verdaderas y predichas."""
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),
-        "precision_macro": float(precision_score(y_true, y_pred, average="macro", zero_division=0)),
-        "recall_macro": float(recall_score(y_true, y_pred, average="macro", zero_division=0)),
+        "precision_macro": float(
+            precision_score(y_true, y_pred, average="macro", zero_division=0)
+        ),
+        "recall_macro": float(
+            recall_score(y_true, y_pred, average="macro", zero_division=0)
+        ),
         "f1_macro": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
     }
 
@@ -96,6 +118,8 @@ def evaluate_model(
     random_state: int = 42,
     apply_oversampling: bool = True,
 ) -> tuple[dict[str, float], np.ndarray, list, int]:
+    """Evalúa un modelo utilizando validación cruzada y devuelve las métricas, matriz de confusión,
+    etiquetas de clase y número efectivo de splits utilizados."""
     y_true, y_pred, effective_splits = cross_validated_predictions(
         x_frame=x_frame,
         y_series=y_series,
@@ -121,6 +145,8 @@ def run_model_suite(
     random_state: int = 42,
     apply_oversampling: bool = True,
 ) -> tuple[pd.DataFrame, dict[str, dict[str, np.ndarray | list]], int]:
+    """Ejecuta una suite de modelos dada por model_builders, evaluando cada modelo con la
+    estrategia de validación cruzada especificada."""
     metrics_rows: list[dict[str, float | str]] = []
     confusion_by_model: dict[str, dict[str, np.ndarray | list]] = {}
     effective_splits: int | None = None
@@ -139,7 +165,9 @@ def run_model_suite(
         if effective_splits is None:
             effective_splits = current_splits
         elif effective_splits != current_splits:
-            raise RuntimeError("Inconsistent fold count across models during evaluation.")
+            raise RuntimeError(
+                "Cantidad de splits efectiva inconsistente entre modelos evaluados."
+            )
 
         metrics_rows.append({"model": model_name, **metrics})
         confusion_by_model[model_name] = {
@@ -150,5 +178,5 @@ def run_model_suite(
     metrics_df = pd.DataFrame(metrics_rows).set_index("model")
     metrics_df = metrics_df.sort_values("f1_macro", ascending=False)
     if effective_splits is None:
-        raise RuntimeError("No models were evaluated.")
+        raise RuntimeError("Ningún modelo fue evaluado.")
     return metrics_df, confusion_by_model, effective_splits

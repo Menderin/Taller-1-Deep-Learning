@@ -8,7 +8,13 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
-from sklearn.feature_selection import RFE, SelectKBest, SequentialFeatureSelector, VarianceThreshold, chi2
+from sklearn.feature_selection import (
+    RFE,
+    SelectKBest,
+    SequentialFeatureSelector,
+    VarianceThreshold,
+    chi2,
+)
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import LeaveOneOut, StratifiedKFold
@@ -53,11 +59,13 @@ class NaiveBayesManual:
 
 
 def choose_n_splits(y_series: pd.Series, requested_splits: int = 5) -> int:
+    """Determina el número efectivo de splits para validación cruzada, asegurando
+    que cada clase tenga al menos 2 muestras en cada fold."""
     min_class_count = int(y_series.value_counts().min())
     if min_class_count < 2:
         raise ValueError(
-            "Cross-validation requires at least 2 samples in every class. "
-            f"Minimum class count found: {min_class_count}."
+            "Cross-validation requiere al menos 2 muestras por clase."
+            f"Cantidad de muestras en la clase minoritaria: {min_class_count}."
         )
     return min(requested_splits, min_class_count)
 
@@ -66,13 +74,16 @@ def build_codification_distributions(
     df: pd.DataFrame,
     codification_columns: Iterable[str] = CODIFICATION_COLUMNS,
 ) -> dict[str, pd.DataFrame]:
+    """Construye un diccionario de distribuciones de clases para cada columna de codificación."""
     distributions: dict[str, pd.DataFrame] = {}
     for column in codification_columns:
         if column not in df.columns:
             continue
         counts = df[column].value_counts().sort_index()
         distribution = counts.rename("count").to_frame()
-        distribution["ratio"] = (distribution["count"] / distribution["count"].sum()).round(6)
+        distribution["ratio"] = (
+            distribution["count"] / distribution["count"].sum()
+        ).round(6)
         distribution.index.name = "class"
         distributions[column] = distribution
     return distributions
@@ -83,6 +94,8 @@ def run_feature_selection_study(
     target_col: str = "GDS",
     random_state: int = 42,
 ) -> tuple[dict[str, pd.DataFrame], dict[str, int]]:
+    """Ejecuta un estudio de selección de características utilizando
+    varias técnicas y devuelve los resultados en un formato estructurado."""
     x_frame = feature_frame(df)
     y_series = df[target_col]
 
@@ -92,7 +105,9 @@ def run_feature_selection_study(
 
     variance_selector = VarianceThreshold(threshold=0.02)
     variance_selector.fit(x_frame)
-    variance_selected = pd.DataFrame({"feature": x_frame.columns[variance_selector.get_support()]})
+    variance_selected = pd.DataFrame(
+        {"feature": x_frame.columns[variance_selector.get_support()]}
+    )
 
     top_k = min(15, x_frame.shape[1])
     chi2_top_selector = SelectKBest(score_func=chi2, k=top_k)
@@ -158,7 +173,9 @@ def run_feature_selection_study(
         ]
     )
     forward_pipeline.fit(x_frame, y_series)
-    forward_selected = x_frame.columns[forward_pipeline.named_steps["selector"].get_support()]
+    forward_selected = x_frame.columns[
+        forward_pipeline.named_steps["selector"].get_support()
+    ]
     forward_df = pd.DataFrame({"feature": forward_selected})
 
     outputs = {
@@ -179,6 +196,8 @@ def run_feature_selection_study(
 
 
 def run_pca_study(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, int]:
+    """Ejecuta un estudio de PCA para analizar la varianza explicada y reducir
+    la dimensionalidad manteniendo el 95% de la varianza."""
     x_frame = feature_frame(df)
 
     pca_full = PCA(n_components=None)
@@ -188,13 +207,17 @@ def run_pca_study(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, int]:
         {
             "component": np.arange(1, len(pca_full.explained_variance_ratio_) + 1),
             "explained_variance_ratio": pca_full.explained_variance_ratio_,
-            "cumulative_explained_variance": np.cumsum(pca_full.explained_variance_ratio_),
+            "cumulative_explained_variance": np.cumsum(
+                pca_full.explained_variance_ratio_
+            ),
         }
     )
 
     pca_95 = PCA(n_components=0.95)
     x_pca_95 = pca_95.fit_transform(x_frame)
-    pca_95_df = pd.DataFrame(x_pca_95, columns=[f"PC{i + 1}" for i in range(pca_95.n_components_)])
+    pca_95_df = pd.DataFrame(
+        x_pca_95, columns=[f"PC{i + 1}" for i in range(pca_95.n_components_)]
+    )
 
     return explained_df, pca_95_df, int(pca_95.n_components_)
 
@@ -204,6 +227,8 @@ def _chi2_select_features(
     y_series: pd.Series,
     k_best: int,
 ) -> tuple[SelectKBest, list[str]]:
+    """Realiza selección de características utilizando chi2 y devuelve
+    el selector ajustado"""
     k_value = min(k_best, x_frame.shape[1])
     selector = SelectKBest(score_func=chi2, k=k_value)
     selector.fit(x_frame, y_series)
@@ -218,13 +243,17 @@ def _predict_with_stratified_kfold(
     random_state: int,
     k_best: int,
 ) -> tuple[np.ndarray, int]:
+    """Realiza predicciones utilizando Stratified K-Fold Cross-Validation con
+    selección de características chi2."""
     n_splits = choose_n_splits(y_series, requested_splits=requested_splits)
 
     x_values = x_frame.to_numpy()
     y_values = y_series.to_numpy()
 
     predictions = np.empty(len(y_values), dtype=object)
-    splitter = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    splitter = StratifiedKFold(
+        n_splits=n_splits, shuffle=True, random_state=random_state
+    )
 
     for train_idx, test_idx in splitter.split(x_values, y_values):
         x_train_frame = x_frame.iloc[train_idx]
@@ -250,11 +279,14 @@ def _predict_with_stratified_kfold(
 
     return y_pred, n_splits
 
+
 def _predict_with_loocv(
     x_frame: pd.DataFrame,
     y_series: pd.Series,
     k_best: int,
 ) -> tuple[np.ndarray, int]:
+    """Realiza predicciones utilizando Leave-One-Out Cross-Validation (LOOCV) con
+    selección de características chi2."""
     x_values = x_frame.to_numpy()
     y_values = y_series.to_numpy()
 
@@ -294,7 +326,11 @@ def _evaluate_single_codification(
     random_state: int,
     k_best: int,
 ) -> tuple[dict[str, float | int], list[str]]:
-    _, selected_columns = _chi2_select_features(x_frame=x_frame, y_series=y_series, k_best=k_best)
+    """Evalúa un modelo Naive Bayes manual utilizando la codificación especificada y devuelve las métricas
+    y las columnas seleccionadas por chi2."""
+    _, selected_columns = _chi2_select_features(
+        x_frame=x_frame, y_series=y_series, k_best=k_best
+    )
     y_values = y_series.to_numpy()
 
     if strategy == "stratified_kfold":
@@ -312,12 +348,16 @@ def _evaluate_single_codification(
             k_best=k_best,
         )
     else:
-        raise ValueError(f"Unknown validation strategy: {strategy}")
+        raise ValueError(f"Estrategia de validación desconocida: {strategy}")
 
     metrics = {
         "accuracy": float(accuracy_score(y_values, y_pred)),
-        "precision_macro": float(precision_score(y_values, y_pred, average="macro", zero_division=0)),
-        "recall_macro": float(recall_score(y_values, y_pred, average="macro", zero_division=0)),
+        "precision_macro": float(
+            precision_score(y_values, y_pred, average="macro", zero_division=0)
+        ),
+        "recall_macro": float(
+            recall_score(y_values, y_pred, average="macro", zero_division=0)
+        ),
         "f1_macro": float(f1_score(y_values, y_pred, average="macro", zero_division=0)),
         "selected_feature_count": len(selected_columns),
         "cv_splits": int(cv_splits),
@@ -332,6 +372,8 @@ def evaluate_naive_bayes_codifications(
     random_state: int = 42,
     k_best: int = 10,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Evalúa el rendimiento de un modelo Naive Bayes manual utilizando diferentes columnas
+    de codificación"""
     rows: list[dict[str, float | int | str]] = []
     selected_rows: list[dict[str, str]] = []
 
@@ -355,7 +397,9 @@ def evaluate_naive_bayes_codifications(
         rows.append({"codification": codification, **metrics})
 
         for feature_name in selected_columns:
-            selected_rows.append({"codification": codification, "feature": feature_name})
+            selected_rows.append(
+                {"codification": codification, "feature": feature_name}
+            )
 
     metrics_df = pd.DataFrame(rows).set_index("codification")
     selected_df = pd.DataFrame(selected_rows)
